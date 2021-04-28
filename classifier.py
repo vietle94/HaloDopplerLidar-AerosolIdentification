@@ -6,7 +6,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
 import matplotlib as mpl
-import sys
 import argparse
 import preprocess
 
