@@ -186,7 +186,8 @@ def classification_algorithm(file, out_directory, diagnostic=False, xr_data=Fals
         ['white', '#2ca02c', 'blue', 'red', 'gray'])
     boundaries = [0, 10, 20, 30, 40, 50]
     norm = mpl.colors.BoundaryNorm(boundaries, cmap.N, clip=True)
-    decimal_time = df['time'].dt.hour + df['time'].dt.minute / 60 + df['time'].dt.second/3600
+    decimal_time = df['time'].dt.hour + \
+        df['time'].dt.minute / 60 + df['time'].dt.second/3600
 
     if diagnostic is True:
         fig, axes = plt.subplots(6, 2, sharex=True, sharey=True,
@@ -257,7 +258,8 @@ def classification_algorithm(file, out_directory, diagnostic=False, xr_data=Fals
                                 depolarization ratio, see Vietle thesis'
 
     df['depo_bleed'].attrs = {'units': ' ',
-                              'long_name': 'Depolarization ratio (bleed through corrected)',
+                              'long_name': 'Depolarization ratio \
+                              (bleed through corrected)',
                               'comments': 'Bleed through corrected'}
 
     df['depo_bleed_sd'].attrs = {'units': ' ',
@@ -274,12 +276,13 @@ def classification_algorithm(file, out_directory, diagnostic=False, xr_data=Fals
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Description for my parser")
-    parser.add_argument("file_location", help="Example: Help argument", type=str)
-    parser.add_argument("out_directory", help="Example: Save argument", type=str)
-    parser.add_argument("-xr", "--XRdevice", help="Example: Print argument",
+    parser = argparse.ArgumentParser(description="Description for arguments")
+    parser.add_argument("file_location", help="File location", type=str)
+    parser.add_argument("out_directory", help="Output directory", type=str)
+    parser.add_argument("-xr", "--XRdevice", help="If data is from Uto-32XR",
                         action='store_true')
-    parser.add_argument("-d", "--diagnostic", help="Example: Output argument",
+    parser.add_argument("-d", "--diagnostic", help="Output a diagnostic image \
+                        for classification algorithm",
                         action='store_true')
     argument = parser.parse_args()
     classification_algorithm(argument.file_location, argument.out_directory,
