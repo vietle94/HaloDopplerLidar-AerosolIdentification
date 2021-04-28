@@ -18,17 +18,24 @@ units = {'beta_raw': '$\\log (m^{-1} sr^{-1})$', 'v_raw': '$m s^{-1}$',
          'v_error': '$m s^{-1}$'}
 
 
-def classification_algorithm(file, out_directory, diagnostic=False):
+def classification_algorithm(file, out_directory, diagnostic=False, xr_data=False):
     Path(out_directory).mkdir(parents=True, exist_ok=True)
     df = xr.open_dataset(file)
     df = df.where(df.range > 90, drop=True)
     df = preprocess.bleed_through(df)
 
-    df['beta_raw'] = df['beta_raw'].where(df['co_signal'] > (1 + df.attrs['background_snr_sd']))
+    df['beta_raw'] = df['beta_raw'].where(df['co_signal'] >
+                                          (1 + df.attrs['background_snr_sd']))
 
     classifier = np.zeros(df['beta_raw'].shape, dtype=int)
 
     log_beta = np.log10(df['beta_raw'])
+
+    if xr_data is True:
+        with open('ref_XR2.npy', 'rb') as f:
+            ref_XR = np.load(f)
+        log_beta[:, :50] = log_beta[:, :50] - ref_XR
+
     # Aerosol
     aerosol = log_beta < -5.5
 
@@ -42,6 +49,9 @@ def classification_algorithm(file, out_directory, diagnostic=False):
     for var in ['beta_raw', 'v_raw', 'depo_bleed']:
         df[var] = df[var].where(df['co_signal'] > (1 + 3*df.attrs['background_snr_sd']))
     log_beta = np.log10(df['beta_raw'])
+
+    if xr_data is True:
+        log_beta[:, :50] = log_beta[:, :50] - ref_XR
 
     range_flat = np.tile(df['range'],
                          df['beta_raw'].shape[0])
@@ -178,7 +188,8 @@ def classification_algorithm(file, out_directory, diagnostic=False):
     boundaries = [0, 10, 20, 30, 40, 50]
     norm = mpl.colors.BoundaryNorm(boundaries, cmap.N, clip=True)
     decimal_time = df['time'].dt.hour + df['time'].dt.minute / 60 + df['time'].dt.second/3600
-    if diagnostic:
+
+    if diagnostic is True:
         fig, axes = plt.subplots(6, 2, sharex=True, sharey=True,
                                  figsize=(16, 9))
         for val, ax, cmap_ in zip([aerosol, aerosol_smoothed,
@@ -241,22 +252,23 @@ def classification_algorithm(file, out_directory, diagnostic=False):
 
     df['classified'] = (['time', 'range'], classifier)
 
-    df.attrs['classified'] = """Clasification algorithm by Vietle
-                            at github.com/vietle94/halo-lidar"""
-    df.attrs['bleed_corrected'] = """Bleed through corrected for
-                            depolarization ratio, see Vietle thesis"""
+    df.attrs['classified'] = 'Clasification algorithm by Vietle \
+                                at github.com/vietle94/halo-lidar'
+    df.attrs['bleed_corrected'] = 'Bleed through corrected for \
+                                depolarization ratio, see Vietle thesis'
 
-    df.classified.attrs = {'units': ' ',
-                           'long_name': 'Classified mask',
-                           'comments': """0: Background, 10: Aerosol,
-                           20: Precipitation, 30: Clouds, 40: Undefined"""}
-    df.depo_bleed.attrs = {'units': ' ',
-                           'long_name': 'Depolarization ratio (bleed through corrected)',
-                           'comments': 'Bleed through corrected'}
-    df.depo_bleed_sd.attrs = {'units': ' ',
-                              'long_name': """Standard deviation of depolarization
-                              ratio (bleed through corrected)""",
+    df['depo_bleed'].attrs = {'units': ' ',
+                              'long_name': 'Depolarization ratio (bleed through corrected)',
                               'comments': 'Bleed through corrected'}
+
+    df['depo_bleed_sd'].attrs = {'units': ' ',
+                                 'long_name': 'Standard deviation of depolarization \
+                              ratio (bleed through corrected)',
+                                 'comments': 'Bleed through corrected'}
+    df['classified'].attrs = {'units': ' ',
+                              'long_name': 'Classified mask',
+                              'comments': '0: Background, 10: Aerosol, \
+                           20: Precipitation, 30: Clouds, 40: Undefined'}
 
     df.to_netcdf(out_directory + '/' + df.attrs['file_name'] +
                  '_classified.nc', format='NETCDF3_CLASSIC')
@@ -272,4 +284,5 @@ if __name__ == "__main__":
                         action='store_true')
     argument = parser.parse_args()
     classification_algorithm(argument.file_location, argument.out_directory,
-                             diagnostic=argument.diagnostic)
+                             diagnostic=argument.diagnostic,
+                             xr_data=argument.XRdevice)
