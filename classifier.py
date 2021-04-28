@@ -249,7 +249,7 @@ def classification_algorithm(file, out_directory, diagnostic=False, xr_data=Fals
     fig.tight_layout()
     fig.savefig(out_directory + '/' + df.attrs['file_name'] + '_classified.png',
                 dpi=150, bbox_inches='tight')
-
+    plt.close('all')
     df['classified'] = (['time', 'range'], classifier)
 
     df.attrs['classified'] = 'Clasification algorithm by Vietle \
