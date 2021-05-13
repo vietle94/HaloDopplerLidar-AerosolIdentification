@@ -1,5 +1,6 @@
 # HaloDopplerLidar-ClassificationAlgorithm
 
+From Viet Le thesis in Helsinki University titled "Aerosol depolarization ratio at 1565nm in Finland with Halo Doppler lidar"
 
 # Required modules
 - xarray
