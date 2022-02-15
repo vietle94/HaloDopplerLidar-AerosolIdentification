@@ -29,7 +29,7 @@ def bleed_through(df):
     sigma_bleed = df.attrs['bleed_through_sd']
     sigma_co, sigma_cross = df.attrs['background_snr_sd'], df.attrs['background_snr_sd']
 
-    df['cross_signal_bleed'] = (['time', 'range'], (df['cross_signal'] - 1) -
+    df['cross_signal_bleed'] = ((df['cross_signal'] - 1) -
                                 bleed * (df['co_signal'] - 1) + 1)
 
     df['cross_signal_bleed_sd'] = np.sqrt(
