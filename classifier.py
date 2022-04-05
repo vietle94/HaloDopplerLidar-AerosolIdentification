@@ -8,6 +8,9 @@ from pathlib import Path
 import matplotlib as mpl
 import argparse
 import preprocess
+import matplotlib.dates as mdates
+from matplotlib.dates import DateFormatter
+import pandas as pd
 
 # %%
 
@@ -186,8 +189,8 @@ def classification_algorithm(file, out_directory, diagnostic=False, xr_data=Fals
         ['white', '#2ca02c', 'blue', 'red', 'gray'])
     boundaries = [0, 10, 20, 30, 40, 50]
     norm = mpl.colors.BoundaryNorm(boundaries, cmap.N, clip=True)
-    decimal_time = df['time'].dt.hour + \
-        df['time'].dt.minute / 60 + df['time'].dt.second/3600
+    # decimal_time = df['time'].dt.hour + \
+    #     df['time'].dt.minute / 60 + df['time'].dt.second/3600
 
     if diagnostic is True:
         fig, axes = plt.subplots(6, 2, sharex=True, sharey=True,
@@ -203,48 +206,56 @@ def classification_algorithm(file, out_directory, diagnostic=False, xr_data=Fals
                                    ['white', '#D2691E'],
                                    ['white', 'blue'], ['white', 'blue'],
                                    ['white', '#D2691E'], ['white', 'blue']]):
-            ax.pcolormesh(decimal_time, df['range'],
+            ax.pcolormesh(df['time'], df['range'],
                           val.T, cmap=mpl.colors.ListedColormap(cmap_))
-        axes.flatten()[-1].pcolormesh(decimal_time, df['range'],
+        axes.flatten()[-1].pcolormesh(df['time'], df['range'],
                                       classifier.T,
                                       cmap=cmap, norm=norm)
-        axes[0, 0].pcolormesh(decimal_time, df['range'],
+        axes[0, 0].pcolormesh(df['time'], df['range'],
                               np.log10(df['beta_raw']).T,
                               cmap='jet', vmin=-8, vmax=-4)
-        axes[0, 1].pcolormesh(decimal_time, df['range'],
+        axes[0, 1].pcolormesh(df['time'], df['range'],
                               df['v_raw'].T, cmap='jet', vmin=-2, vmax=2)
         fig.tight_layout()
         fig.savefig(out_directory + '/' + df.attrs['file_name'] + '_diagnostic_plot.png',
                     dpi=150, bbox_inches='tight')
 
-    fig, ax = plt.subplots(4, 1, figsize=(6, 8))
+    fig, ax = plt.subplots(4, 1, figsize=(6, 8), sharex=True)
     ax1, ax3, ax5, ax7 = ax.ravel()
-    p1 = ax1.pcolormesh(decimal_time, df['range'],
+    p1 = ax1.pcolormesh(df['time'], df['range'],
                         np.log10(df['beta_raw']).T, cmap='jet', vmin=-8, vmax=-4)
-    p2 = ax3.pcolormesh(decimal_time, df['range'],
+    p2 = ax3.pcolormesh(df['time'], df['range'],
                         df['v_raw'].T, cmap='jet', vmin=-2, vmax=2)
-    p3 = ax5.pcolormesh(decimal_time, df['range'],
+    p3 = ax5.pcolormesh(df['time'], df['range'],
                         df['depo_bleed'].T, cmap='jet', vmin=0, vmax=0.5)
-    p4 = ax7.pcolormesh(decimal_time, df['range'],
+    p4 = ax7.pcolormesh(df['time'], df['range'],
                         classifier.T,
                         cmap=cmap, norm=norm)
+
+    myFmt = DateFormatter("%H")
     for ax in [ax1, ax3, ax5, ax7]:
         ax.yaxis.set_major_formatter(preprocess.m_km_ticks())
-        ax.set_ylabel('Range [km, a.g.l]')
+        ax.set_ylabel('Height [km, a.g.l]')
 
     cbar = fig.colorbar(p1, ax=ax1)
-    cbar.ax.set_ylabel('Beta [' + units.get('beta_raw', None) + ']', rotation=90)
+    cbar.ax.set_ylabel(r'$\beta\quad[Mm^{-1}]$', rotation=90)
     # cbar.ax.yaxis.set_label_position('left')
     cbar = fig.colorbar(p2, ax=ax3)
-    cbar.ax.set_ylabel('Velocity [' + units.get('v_raw', None) + ']', rotation=90)
+    cbar.ax.set_ylabel('w [' + units.get('v_raw', None) + ']', rotation=90)
     # cbar.ax.yaxis.set_label_position('left')
     cbar = fig.colorbar(p3, ax=ax5)
-    cbar.ax.set_ylabel('Depolarization ratio')
+    cbar.ax.set_ylabel(r'$\delta$')
     # cbar.ax.yaxis.set_label_position('left')
     cbar = fig.colorbar(p4, ax=ax7, ticks=[5, 15, 25, 35, 45])
     cbar.ax.set_yticklabels(['Background', 'Aerosol',
                              'Precipitation', 'Clouds', 'Undefined'])
-    ax7.set_xlabel('Time [UTC - hour]')
+
+    ax7.set_xlim(left=pd.to_datetime(df.time[0].values).floor('D'))
+    myFmt = DateFormatter("%H")
+    ax7.xaxis.set_major_locator(mdates.HourLocator(byhour=[0, 6, 12, 18]))
+    ax7.xaxis.set_major_formatter(myFmt)
+    ax7.set_xlim(left=pd.to_datetime(df.time[0].values).floor('D'))
+    ax7.set_xlabel('Time UTC [hour]')
 
     fig.tight_layout()
     fig.savefig(out_directory + '/' + df.attrs['file_name'] + '_classified.png',
