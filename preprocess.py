@@ -55,3 +55,20 @@ def m_km_ticks():
     Modify ticks from m to km
     '''
     return FuncFormatter(lambda x, pos: f'{x/1000:.0f}')
+
+
+def beta(df, f=308.399, D=18.565e-3):
+    SNR = (df['co_signal'] - 1)
+    R = df['range']
+    wavelength = df['wavelength'].values  # 1.5e-6 m
+    c = 3e8
+    h = 6.626e-34
+    E = df['energy'].values  # 9.99e-6 J
+    B = df['bandwidth'].values  # 50000000 Hz
+    v = c/wavelength
+    n = 1
+    A = np.pi * (D**2) / (4*(1+(np.pi*(D**2)/(4*wavelength*R))**2*(1-R/f)**2))
+    T = A/(R**2)
+    beta = (2*h*v*B)/(n*c*E) * (SNR/T)
+
+    return beta

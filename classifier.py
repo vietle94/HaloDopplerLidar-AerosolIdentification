@@ -26,6 +26,35 @@ def classification_algorithm(file, out_directory, diagnostic=False, xr_data=Fals
     df = df.where(df.range > 90, drop=True)
     df = preprocess.bleed_through(df)
 
+    if xr_data is True:
+        beta_corrected = preprocess.beta(df, f=308.399, D=18.565e-3)
+        fig, ax = plt.subplots(2, 1, figsize=(16, 9), sharex=True, sharey=True)
+        p1 = ax[0].pcolormesh(df['time'], df['range'], np.log10(df['beta_raw']).T,
+                              vmin=-8, vmax=-4, cmap='jet')
+        p2 = ax[1].pcolormesh(df['time'], df['range'], np.log10(beta_corrected).T,
+                              vmin=-8, vmax=-4, cmap='jet')
+        myFmt = DateFormatter("%H")
+        for ax_ in ax.flatten():
+            ax_.yaxis.set_major_formatter(preprocess.m_km_ticks())
+            ax_.set_ylabel('Height [km, a.g.l]')
+
+        cbar = fig.colorbar(p1, ax=ax[0])
+        cbar.ax.set_ylabel(r'$\beta original\quad[Mm^{-1}]$', rotation=90)
+
+        cbar = fig.colorbar(p2, ax=ax[1])
+        cbar.ax.set_ylabel(r'$\beta corrected\quad[Mm^{-1}]$', rotation=90)
+
+        ax[1].set_xlim(left=pd.to_datetime(df.time[0].values).floor('D'))
+        ax[1].xaxis.set_major_locator(mdates.HourLocator(byhour=[0, 6, 12, 18]))
+        ax[1].xaxis.set_major_formatter(myFmt)
+        ax[1].set_xlim(left=pd.to_datetime(df.time[0].values).floor('D'))
+        ax[1].set_xlabel('Time UTC [hour]')
+        fig.tight_layout()
+        fig.savefig(out_directory + '/' + df.attrs['file_name'] + '_beta_corrected.png',
+                    dpi=150, bbox_inches='tight')
+
+        df['beta_raw'] = beta_corrected
+
     df['beta_raw'] = df['beta_raw'].where(df['co_signal'] >
                                           (1 + df.attrs['background_snr_sd']))
 
@@ -33,10 +62,9 @@ def classification_algorithm(file, out_directory, diagnostic=False, xr_data=Fals
 
     log_beta = np.log10(df['beta_raw'])
 
-    if xr_data is True:
-        with open('ref_XR2.npy', 'rb') as f:
-            ref_XR = np.load(f)
-        log_beta[:, :50] = log_beta[:, :50] - ref_XR
+    # with open('ref_XR2.npy', 'rb') as f:
+    #     ref_XR = np.load(f)
+    # log_beta[:, :50] = log_beta[:, :50] - ref_XR
 
     # Aerosol
     aerosol = log_beta < -5.5
@@ -52,8 +80,8 @@ def classification_algorithm(file, out_directory, diagnostic=False, xr_data=Fals
         df[var] = df[var].where(df['co_signal'] > (1 + 3*df.attrs['background_snr_sd']))
     log_beta = np.log10(df['beta_raw'])
 
-    if xr_data is True:
-        log_beta[:, :50] = log_beta[:, :50] - ref_XR
+    # if xr_data is True:
+    #     log_beta[:, :50] = log_beta[:, :50] - ref_XR
 
     range_flat = np.tile(df['range'],
                          df['beta_raw'].shape[0])
